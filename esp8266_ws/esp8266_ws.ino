@@ -1,8 +1,7 @@
+#include <ArduinoJson.h>
 #include <Arduino.h>
-
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
-
 #include <WebSocketsClient.h>
 #include <SoftwareSerial.h>
 #include <Hash.h>
@@ -29,6 +28,11 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
 			USE_SERIAL.printf("[WSc] get text: %s\n", payload);
 
 			// send message to server
+      ESPSerial.println("HELLO WORLD");
+      if (ESPSerial.available()) {
+  			USE_SERIAL.println("DATA TRANSFERRING...");
+        ESPSerial.printf("HELLO WORLD %s\n", payload);
+      }
 			// webSocket.sendTXT("message here");
 			break;
 		case WStype_BIN:
@@ -81,7 +85,7 @@ void setup() {
 	}
 
 	// server address, port and URL
-	webSocket.begin("192.168.0.101", 3000, "/");
+	webSocket.begin("192.168.0.103", 8000, "/");
 
 	// event handler
 	webSocket.onEvent(webSocketEvent);
@@ -107,15 +111,34 @@ void loop() {
   if (ESPSerial.available()) {
     String data = ESPSerial.readStringUntil('\r\n');
     USE_SERIAL.println(data);
-    if (webSocket.isConnected()) {
+  
+    if (webSocket.isConnected() && isValid(data)) {
       webSocket.sendTXT(data);
     }
   }
 
-  if (USE_SERIAL.available()) {
-    if (webSocket.isConnected()) {
-      String data = USE_SERIAL.readStringUntil('\r\n');
-      webSocket.sendTXT(data);
+  // if (USE_SERIAL.available()) {
+  //   if (webSocket.isConnected()) {
+  //     String data = USE_SERIAL.readStringUntil('\r\n');
+  //     webSocket.sendTXT(data);
+  //   }
+  // }
+}
+
+bool isValid(String data) {
+  // Create a StaticJsonDocument for parsing
+    StaticJsonDocument<200> doc; // Adjust size based on JSON complexity
+
+    // Parse the JSON string
+    DeserializationError error = deserializeJson(doc, data);
+
+    // Check if parsing was successful
+    if (error) {
+        // Serial.print("JSON parsing failed: ");
+        // Serial.println(error.c_str());
+        return false;
+    } else {
+        // Serial.println("JSON parsing successful!");
+        return true;
     }
-  }
 }

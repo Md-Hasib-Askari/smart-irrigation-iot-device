@@ -28,7 +28,7 @@ const SensorDashboard = ({ state }: { state: string }) => {
 
   const didUnmount = useRef(false);
   const { sendMessage, lastMessage, readyState } = useWebSocket(
-    "ws://localhost:3001/",
+    "ws://localhost:8001/",
     {
       shouldReconnect: (_closeEvent) => {
         return didUnmount.current === false;
@@ -45,23 +45,28 @@ const SensorDashboard = ({ state }: { state: string }) => {
   }, []);
 
   useEffect(() => {
-    if (lastMessage !== null) {
-      lastMessage.data.text().then((data: string) => {
+    const data = lastMessage?.data;
+    try {
+      if (lastMessage && lastMessage !== null && data !== null) {
+        // lastMessage.data.then((data: string) => {
         try {
           const message = JSON.parse(data);
-          setSensorData((prev) => ({
-            ...message,
-            soilMoisture: Math.random() * 100,
-            waterLevel: Math.random() * 100,
-          }));
+          console.log("Received message", message);
+          setSensorData({
+            temperature: message.temperature,
+            humidity: message.humidity,
+            soilMoisture: message.soilMoisture,
+            waterLevel: message.waterLevel,
+          });
         } catch (error) {
           console.error("Error parsing JSON", error);
         }
-      });
+        // });
+      }
+    } catch (error) {
+      console.error("Error parsing JSON", error);
     }
   }, [lastMessage]);
-
-  const handleClickSendMessage = useCallback(() => sendMessage("Hello"), []);
 
   const connectionStatus = {
     [ReadyState.CONNECTING]: "Connecting",
@@ -79,8 +84,8 @@ const SensorDashboard = ({ state }: { state: string }) => {
 
   const handleManualTrigger = () => {
     setLoading(true);
-    // Simulate sending a POST request to trigger the pump
-    setTimeout(() => {
+    try {
+      sendMessage(JSON.stringify({ action: "manual_trigger", motor: !motor }));
       setActivities((prev) => [
         {
           key: prev.length + 1,
@@ -92,7 +97,11 @@ const SensorDashboard = ({ state }: { state: string }) => {
       ]);
       setMotor((prev) => !prev);
       setLoading(false);
-    }, 2000);
+    } catch (error) {
+      console.error("Error sending POST request", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const columns = [
@@ -146,7 +155,7 @@ const SensorDashboard = ({ state }: { state: string }) => {
                 {key}
               </h3>
               <p className="text-2xl text-gray-800">
-                {value ? value.toFixed(2) : <Spin />}
+                {typeof value === "number" ? value.toFixed(2) : <Spin />}
               </p>
             </div>
           ))}
