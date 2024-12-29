@@ -88,7 +88,7 @@ wss2.on("connection", (ws) => {
 // import OpenAI from "openai";
 
 // const openai = new OpenAI({
-//   apiKey: "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",
+//   apiKey: "process.env.OPENAI_API_KEY",
 // });
 
 // const completion = openai.chat.completions.create({
